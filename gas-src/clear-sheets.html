@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+
+      form {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      #sheetsList {
+        margin-bottom: 20px;
+      }
+
+      input[type="button"] {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      input[type="button"]:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="sheetForm">
+      <div id="sheetsList"></div>
+      <input type="button" value="Clear Data" onclick="clearSelectedSheets()">
+    </form>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        google.script.run.withSuccessHandler(function(html) {
+          document.getElementById('sheetsList').innerHTML = html;
+        }).getSheetsList();
+      });
+      function clearSelectedSheets() {
+        const form = document.getElementById('sheetForm');
+        const formData = new FormData(form);
+        const selectedSheets = [];
+        for (const [key, value] of formData.entries()) {
+          if (value === 'on') {
+            selectedSheets.push(key);
+          }
+        }
+        google.script.run.clearSheetsData(selectedSheets);
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
