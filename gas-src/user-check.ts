@@ -6,6 +6,7 @@ const USER_LIST_SHEET_HEADER = {
 const MULTIPLE_SENDERS_CHECK_SHEET_INFO = {
   title: '確認1: 複数のAZメンバーが送信予定',
   header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス'],
+  sheetOrder: 1
 }
 
 const MULTIPLE_SENDERS_CHECK_UI = {
@@ -23,8 +24,9 @@ const MULTIPLE_SENDERS_CHECK_UI = {
 }
 
 const MULTIPLE_COMPANY_NAME_CHECK_SHEET_INFO = {
-  title: '確認3: 送信先会社名のパターンが複数あり',
+  title: '確認2: 送信先会社名のパターンが複数あり',
   header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先会社名ごと)'],
+  sheetOrder: 2
 }
 
 const MULTIPLE__COMPANY_NAME_CHECK_UI = {
@@ -37,8 +39,9 @@ const MULTIPLE__COMPANY_NAME_CHECK_UI = {
 }
 
 const MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO = {
-  title: '確認2: 送信先担当者名のパターンが複数あり',
+  title: '確認3: 送信先担当者名のパターンが複数あり',
   header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先担当者名ごと)'],
+  sheetOrder: 3
 }
 
 const MULTIPLE_STAFF_NAME_CHECK_UI = {
@@ -69,9 +72,7 @@ const SHEET_CLEAR_UI = {
   }
 }
 
-const ADMIN_USER_EMAILS = [
-  'tiger.tiger.1223@gmail.com',
-]
+const ADMIN_USER_EMAILS_PROPERTY_NAME = 'ADMIN_USER_EMAILS'
 
 type ContactData = {
   to: string,
@@ -88,13 +89,23 @@ type ContactDetails<T extends string> = {
 
 type CheckSheetInfo = {
   title: string
-  header: string[]
+  header: string[],
+  sheetOrder: number
 }
 
 function onOpen(): void {
   const ui = SpreadsheetApp.getUi()
   const activeUserEmail = Session.getActiveUser().getEmail()
-  if (!ADMIN_USER_EMAILS.includes(activeUserEmail)) {
+  const adminUserEmails = JSON.parse(
+    PropertiesService.getScriptProperties().getProperty(ADMIN_USER_EMAILS_PROPERTY_NAME) || '[]')
+    /* 
+    Script Property (Apps Script Editor > Project Settings > Script Properties) 
+    for admin user is stored as follows:
+    [
+      "test@azoom.jp",
+    ]
+    */
+  if (!adminUserEmails.includes(activeUserEmail)) {
     return
   }
   ui.createMenu('リスト確認')
@@ -210,13 +221,13 @@ function processSheets<T extends string>(
     const rawDatas = range.getValues()
     
     if (requiredDataType === REQUIRED_DATA_TYPE.toBasedData) {
-      addToBasedData(rawDatas, contactDetails)
+      addToBasedData(rawDatas, sheetName, contactDetails)
     }
     if (requiredDataType === REQUIRED_DATA_TYPE.staffNameBasedData) {
-      addNameBasedData(rawDatas, contactDetails, CHECK_NAME_TYPE.staffName)
+      addNameBasedData(rawDatas, sheetName, contactDetails, CHECK_NAME_TYPE.staffName)
     }
     if (requiredDataType === REQUIRED_DATA_TYPE.companyBasedData) {
-      addNameBasedData(rawDatas, contactDetails, CHECK_NAME_TYPE.companyName)
+      addNameBasedData(rawDatas, sheetName, contactDetails, CHECK_NAME_TYPE.companyName)
     }
 
   })
@@ -241,11 +252,13 @@ function checkHeaderValidation(sheetHeader: string[], expectedHeader: string[]):
 
 function addToBasedData(
   rawDatas: any[],
+  sheetName: string,
   contactDetails: ContactDetails<string>
 ) {
   rawDatas.forEach(rawData => {
     addContactDetail(
       rawData,
+      sheetName,
       contactDetails
     )
   })
@@ -253,12 +266,14 @@ function addToBasedData(
 
 function addNameBasedData(
   rawDatas: any[][],
+  sheetName: string,
   contactDetails: ContactDetails<string>,
   checkName: string
 ) {
   rawDatas.forEach(rawData => {
     addContactDetail(
       rawData,
+      sheetName,
       contactDetails,
       checkName
     )
@@ -267,6 +282,7 @@ function addNameBasedData(
 
 function addContactDetail(
   rawData: any[],
+  sheetName: string,
   contactDetails: ContactDetails<string>,
   checkName?: string,
 ) {
@@ -279,13 +295,14 @@ function addContactDetail(
   if (!contactDetails[to]) {
     contactDetails[to] = []
   }
+  const fromValue = `${from} (${sheetName})`
   
   if(!checkName) {
     (contactDetails[to] as ContactData[]).push({
       to,
       companyName,
       staffName,
-      from
+      from: fromValue
     })
   }
   if(checkName === CHECK_NAME_TYPE.companyName) {
@@ -296,7 +313,7 @@ function addContactDetail(
       to,
       companyName,
       staffName,
-      from
+      from: fromValue
     })
   }
   if(checkName === CHECK_NAME_TYPE.staffName) {
@@ -307,7 +324,7 @@ function addContactDetail(
       to,
       companyName,
       staffName,
-      from
+      from: fromValue
     })
   }
 }
@@ -375,14 +392,15 @@ function getFilteredNameBasedData<T extends string>(
   for (let to in contactDetails) {
     const names = Object.keys(contactDetails[to])
     if(names.length < targetNum) {
-      return
+      continue
     }
 
-    const trimmedNames = names.map(name => name.replace(/\s+/g, '').trim())
-    const originalNames = new Set(trimmedNames)
+    const isAllNamesMatched = names
+      .map(name => name.replace(/\s+/g, ''))
+      .every((name, _, arr) => name === arr[0])
     
-    if (originalNames.size === 1) {
-      return
+    if (isAllNamesMatched) {
+      continue
     }
 
     const relevantRecords: ContactData[] = []
@@ -433,15 +451,18 @@ function outputTargetDataToSheet(
     resultSheet.clear()
   }
 
+  if (checkShInfo.sheetOrder !== undefined) {
+    spreadsheet.setActiveSheet(resultSheet)
+    spreadsheet.moveActiveSheet(checkShInfo.sheetOrder)
+  }
+
   resultSheet.appendRow(['対象外シート名', '', ...checkShInfo.header])
 
   if (excludedSheetNames.length > 0) {
     resultSheet.getRange(2, 1).setValue(excludedSheetNames.join('\n'))
   }
-  console.log(targetDatas)
 
   if(targetDatas.length === 0) {
-    console.log(targetDatas.length)
     switch (requiredDataType) {
       case REQUIRED_DATA_TYPE.toBasedData:
         ui.alert(MULTIPLE_SENDERS_CHECK_UI.noData.alertDescription)
