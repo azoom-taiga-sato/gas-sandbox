@@ -23,7 +23,7 @@ const MULTIPLE_SENDERS_CHECK_UI = {
 }
 
 const MULTIPLE_COMPANY_NAME_CHECK_SHEET_INFO = {
-  title: '確認3: 送信先会社名のパターンが複数あり',
+  title: '確認2: 送信先会社名のパターンが複数あり',
   header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先会社名ごと)'],
 }
 
@@ -37,7 +37,7 @@ const MULTIPLE__COMPANY_NAME_CHECK_UI = {
 }
 
 const MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO = {
-  title: '確認2: 送信先担当者名のパターンが複数あり',
+  title: '確認3: 送信先担当者名のパターンが複数あり',
   header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先担当者名ごと)'],
 }
 
@@ -69,9 +69,7 @@ const SHEET_CLEAR_UI = {
   }
 }
 
-const ADMIN_USER_EMAILS = [
-  'tiger.tiger.1223@gmail.com',
-]
+const ADMIN_USER_EMAILS_PROPERTY_NAME = 'ADMIN_USER_EMAILS'
 
 type ContactData = {
   to: string,
@@ -94,7 +92,16 @@ type CheckSheetInfo = {
 function onOpen(): void {
   const ui = SpreadsheetApp.getUi()
   const activeUserEmail = Session.getActiveUser().getEmail()
-  if (!ADMIN_USER_EMAILS.includes(activeUserEmail)) {
+  const adminUserEmails = JSON.parse(
+    PropertiesService.getScriptProperties().getProperty(ADMIN_USER_EMAILS_PROPERTY_NAME) || '[]')
+    /* 
+    Script Property (Apps Script Editor > Project Settings > Script Properties) 
+    for admin user is stored as follows:
+    [
+      "test@azoom.jp",
+    ]
+    */
+  if (!adminUserEmails.includes(activeUserEmail)) {
     return
   }
   ui.createMenu('リスト確認')
@@ -375,14 +382,15 @@ function getFilteredNameBasedData<T extends string>(
   for (let to in contactDetails) {
     const names = Object.keys(contactDetails[to])
     if(names.length < targetNum) {
-      return
+      continue
     }
 
-    const trimmedNames = names.map(name => name.replace(/\s+/g, '').trim())
-    const originalNames = new Set(trimmedNames)
+    const isAllNamesMatched = names
+      .map(name => name.replace(/\s+/g, ''))
+      .every((name, _, arr) => name === arr[0])
     
-    if (originalNames.size === 1) {
-      return
+    if (isAllNamesMatched) {
+      continue
     }
 
     const relevantRecords: ContactData[] = []
@@ -438,10 +446,8 @@ function outputTargetDataToSheet(
   if (excludedSheetNames.length > 0) {
     resultSheet.getRange(2, 1).setValue(excludedSheetNames.join('\n'))
   }
-  console.log(targetDatas)
 
   if(targetDatas.length === 0) {
-    console.log(targetDatas.length)
     switch (requiredDataType) {
       case REQUIRED_DATA_TYPE.toBasedData:
         ui.alert(MULTIPLE_SENDERS_CHECK_UI.noData.alertDescription)
