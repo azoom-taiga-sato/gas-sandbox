@@ -22,20 +22,6 @@ const MULTIPLE_SENDERS_CHECK_UI = {
   }
 }
 
-const MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO = {
-  title: '確認2: 送信先担当者名のパターンが複数あり',
-  header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先担当者名ごと)'],
-}
-
-const MULTIPLE_STAFF_NAME_CHECK_UI = {
-  noData: {
-    alertDescription: '全宛先の送信先担当者名は同じです',
-  },
-  dataExisted: {
-    alertDescription: `送信先担当者名の記載パターンが複数存在する宛先リストがあります。${MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO.title} シートを確認してください。`,
-  }
-}
-
 const MULTIPLE_COMPANY_NAME_CHECK_SHEET_INFO = {
   title: '確認3: 送信先会社名のパターンが複数あり',
   header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先会社名ごと)'],
@@ -50,9 +36,18 @@ const MULTIPLE__COMPANY_NAME_CHECK_UI = {
   }
 }
 
-const NAME_CHECK_REASON = {
-  characterDifference: '異なる名前',
-  whiteSpaceSizeDifference: 'スペース違い'
+const MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO = {
+  title: '確認2: 送信先担当者名のパターンが複数あり',
+  header: ['送信先メールアドレス', '送信先会社名', '送信先担当者名', '送信者メールアドレス(送信先担当者名ごと)'],
+}
+
+const MULTIPLE_STAFF_NAME_CHECK_UI = {
+  noData: {
+    alertDescription: '全宛先の送信先担当者名は同じです',
+  },
+  dataExisted: {
+    alertDescription: `送信先担当者名の記載パターンが複数存在する宛先リストがあります。${MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO.title} シートを確認してください。`,
+  }
 }
 
 const REQUIRED_DATA_TYPE = {
@@ -83,7 +78,6 @@ type ContactData = {
   companyName: string,
   staffName: string,
   from: string,
-  reason?: string
 }
 
 type ContactDetails<T extends string> = {
@@ -106,9 +100,9 @@ function onOpen(): void {
   ui.createMenu('リスト確認')
     .addItem(`${MULTIPLE_SENDERS_CHECK_SHEET_INFO.title}`, 'checkMultipleSenderRecords')
     .addSeparator()
-    .addItem(`${MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO.title}`, 'checkMultipleStaffNames')
-    .addSeparator()
     .addItem(`${MULTIPLE_COMPANY_NAME_CHECK_SHEET_INFO.title}`, 'checkMultipleCompanyNames')
+    .addSeparator()
+    .addItem(`${MULTIPLE_STAFF_NAME_CHECK_SHEET_INFO.title}`, 'checkMultipleStaffNames')
     .addSeparator()
     .addItem(`${SHEET_CLEAR_UI.title.beforeClear}`, 'showSheetSelectionDialog')
     .addToUi()
@@ -380,49 +374,47 @@ function getFilteredNameBasedData<T extends string>(
 ) {
   for (let to in contactDetails) {
     const names = Object.keys(contactDetails[to])
-    if (names.length >= targetNum) {
-      const relevantRecords: ContactData[] = []
-      const observedNames = new Set()
-      const originalNames = new Set(names)
-      const fromGroup: { [key: string]: string[] } = {}
-
-      names.forEach(name => {
-        contactDetails[to][name].forEach(record => {
-          relevantRecords.push({
-            to: record.to,
-            companyName: record.companyName,
-            staffName: record.staffName,
-            from: record.from
-          })
-          if (!fromGroup[name]) fromGroup[name] = []
-          fromGroup[name].push(record.from)
-        })
-        observedNames.add(name.replace(/\s+/g, ''))
-      })
-
-      const reasons: string[] = []
-      if (observedNames.size !== originalNames.size) {
-        reasons.push(NAME_CHECK_REASON.whiteSpaceSizeDifference)
-      }
-      if (originalNames.size > 1) {
-        reasons.push(NAME_CHECK_REASON.characterDifference)
-      }
-
-      const uniqueNames = Array.from(new Set(relevantRecords.map(record => record[checkName] as string)))
-      const fromDetails = uniqueNames.map((name, index) => {
-        const fromList = fromGroup[name].join(', ')
-        const suffix = index === uniqueNames.length - 1 ? '' : '\n'
-        return `・${name}: ${fromList}${suffix}`
-      }).join('')
-
-      nameBasedDatas.push({
-        to,
-        companyName: checkName === CHECK_NAME_TYPE.companyName ? uniqueNames.join(', ') : relevantRecords[0].companyName,
-        staffName: checkName === CHECK_NAME_TYPE.staffName ? uniqueNames.join(', ') : relevantRecords[0].staffName,
-        from: fromDetails,
-        reason: reasons.join(', ')
-      })
+    if(names.length < targetNum) {
+      return
     }
+
+    const trimmedNames = names.map(name => name.replace(/\s+/g, '').trim())
+    const originalNames = new Set(trimmedNames)
+    
+    if (originalNames.size === 1) {
+      return
+    }
+
+    const relevantRecords: ContactData[] = []
+    const fromGroup: { [key: string]: string[] } = {}
+
+    names.forEach(name => {
+      contactDetails[to][name].forEach(record => {
+        relevantRecords.push({
+          to: record.to,
+          companyName: record.companyName,
+          staffName: record.staffName,
+          from: record.from
+        })
+        if (!fromGroup[name]) fromGroup[name] = []
+        fromGroup[name].push(record.from)
+      })
+    })
+
+    const uniqueNames = Array.from(new Set(relevantRecords.map(record => record[checkName] as string)))
+    const fromDetails = uniqueNames.map((name, index) => {
+      const fromList = fromGroup[name].join(', ')
+      const suffix = index === uniqueNames.length - 1 ? '' : '\n'
+      return `・${name}: ${fromList}${suffix}`
+    }).join('')
+
+    nameBasedDatas.push({
+      to,
+      companyName: checkName === CHECK_NAME_TYPE.companyName ? uniqueNames.join(', ') : relevantRecords[0].companyName,
+      staffName: checkName === CHECK_NAME_TYPE.staffName ? uniqueNames.join(', ') : relevantRecords[0].staffName,
+      from: fromDetails,
+    })
+
   }
 }
 
@@ -446,7 +438,10 @@ function outputTargetDataToSheet(
   if (excludedSheetNames.length > 0) {
     resultSheet.getRange(2, 1).setValue(excludedSheetNames.join('\n'))
   }
+  console.log(targetDatas)
+
   if(targetDatas.length === 0) {
+    console.log(targetDatas.length)
     switch (requiredDataType) {
       case REQUIRED_DATA_TYPE.toBasedData:
         ui.alert(MULTIPLE_SENDERS_CHECK_UI.noData.alertDescription)
@@ -458,28 +453,18 @@ function outputTargetDataToSheet(
         ui.alert(MULTIPLE__COMPANY_NAME_CHECK_UI.noData.alertDescription)
         break
     }
+    return
   }
 
   targetDatas.forEach((result, index) => {
     const row = 2 + index
-    if (result.reason) {
-      resultSheet.getRange(row, 3, 1, 5)
-        .setValues([[
-          result.to,
-          result.companyName,
-          result.staffName,
-          result.from,
-          result.reason
-        ]])
-    } else {
-      resultSheet.getRange(row, 3, 1, 4)
-        .setValues([[
-          result.to,
-          result.companyName,
-          result.staffName,
-          result.from
-        ]])
-    }
+    resultSheet.getRange(row, 3, 1, 4)
+      .setValues([[
+        result.to,
+        result.companyName,
+        result.staffName,
+        result.from
+      ]])
   })
   switch (requiredDataType) {
     case REQUIRED_DATA_TYPE.toBasedData:
