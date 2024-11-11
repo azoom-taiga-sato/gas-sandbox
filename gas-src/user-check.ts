@@ -164,7 +164,7 @@ function processAndOutputData(
     requiredDataType
   )
 
-  const targetData = getTargetData(
+  const targetData = getFilteredData(
     contactDetails,
     requiredDataType,
     targetNum
@@ -216,13 +216,13 @@ function processSheets<T extends string>(
     const rawDatas = range.getValues()
     
     if (requiredDataType === REQUIRED_DATA_TYPE.toBasedData) {
-      processToBasedData(rawDatas, contactDetails)
+      addToBasedData(rawDatas, contactDetails)
     }
     if (requiredDataType === REQUIRED_DATA_TYPE.staffNameBasedData) {
-      processNameBasedData(rawDatas, contactDetails, CHECK_NAME_TYPE.staffName)
+      addNameBasedData(rawDatas, contactDetails, CHECK_NAME_TYPE.staffName)
     }
     if (requiredDataType === REQUIRED_DATA_TYPE.companyBasedData) {
-      processNameBasedData(rawDatas, contactDetails, CHECK_NAME_TYPE.companyName)
+      addNameBasedData(rawDatas, contactDetails, CHECK_NAME_TYPE.companyName)
     }
 
   })
@@ -245,7 +245,7 @@ function checkHeaderValidation(sheetHeader: string[], expectedHeader: string[]):
          sheetHeader.every((value, index) => value === expectedHeader[index])
 }
 
-function processToBasedData(
+function addToBasedData(
   rawDatas: any[],
   contactDetails: ContactDetails<string>
 ) {
@@ -257,7 +257,7 @@ function processToBasedData(
   })
 }
 
-function processNameBasedData(
+function addNameBasedData(
   rawDatas: any[][],
   contactDetails: ContactDetails<string>,
   checkName: string
@@ -318,7 +318,7 @@ function addContactDetail(
   }
 }
 
-function getTargetData<T extends string>(
+function getFilteredData<T extends string>(
   contactDetails: ContactDetails<T>,
   requiredDataType: string,
   targetNum: number
@@ -326,14 +326,14 @@ function getTargetData<T extends string>(
   const targetDatas: ContactData[] = []
   switch (requiredDataType) {
     case REQUIRED_DATA_TYPE.toBasedData:
-      getToBasedData(
+      getFilteredToBasedData(
         contactDetails,
         targetNum,
         targetDatas
       )
       break
       case REQUIRED_DATA_TYPE.companyBasedData:
-        getNameBasedData(
+        getFilteredNameBasedData(
           contactDetails,
           targetNum,
           CHECK_NAME_TYPE.companyName,
@@ -341,7 +341,7 @@ function getTargetData<T extends string>(
         )
         break
       case REQUIRED_DATA_TYPE.staffNameBasedData:
-        getNameBasedData(
+        getFilteredNameBasedData(
           contactDetails,
           targetNum,
           CHECK_NAME_TYPE.staffName,
@@ -352,7 +352,7 @@ function getTargetData<T extends string>(
   return targetDatas
 }
 
-function getToBasedData<T extends string>(
+function getFilteredToBasedData<T extends string>(
   contactDetails: ContactDetails<T>,
   targetNum: number,
   toBasedDatas: ContactData[],
@@ -372,7 +372,7 @@ function getToBasedData<T extends string>(
   }
 }
 
-function getNameBasedData<T extends string>(
+function getFilteredNameBasedData<T extends string>(
   contactDetails: ContactDetails<T>,
   targetNum: number,
   checkName: string,
@@ -380,16 +380,13 @@ function getNameBasedData<T extends string>(
 ) {
   for (let to in contactDetails) {
     const names = Object.keys(contactDetails[to])
-    console.log(`names: ${names}`)
     if (names.length >= targetNum) {
       const relevantRecords: ContactData[] = []
       const observedNames = new Set()
       const originalNames = new Set(names)
       const fromGroup: { [key: string]: string[] } = {}
-      console.log(`names: ${names} and checkName: ${checkName}`)
 
       names.forEach(name => {
-        console.log(`contactDetails[to][name]: ${contactDetails[to][name]}`)
         contactDetails[to][name].forEach(record => {
           relevantRecords.push({
             to: record.to,
