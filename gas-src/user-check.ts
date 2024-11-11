@@ -502,8 +502,8 @@ function outputTargetDataToSheet(
 
 function showSheetSelectionDialog(): void {
   const htmlOutput = HtmlService.createHtmlOutputFromFile(SHEET_CLEAR_UI.filePath)
-    .setWidth(300)
-    .setHeight(500)
+    .setWidth(600)
+    .setHeight(600)
   SpreadsheetApp.getUi()
     .showModalDialog(htmlOutput, SHEET_CLEAR_UI.title.beforeClear)
 }
