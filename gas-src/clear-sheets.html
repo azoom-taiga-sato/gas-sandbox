@@ -22,8 +22,13 @@
         margin-bottom: 20px;
       }
 
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
       input[type="button"] {
-        background-color: #007bff;
         color: #fff;
         border: none;
         padding: 10px 20px;
@@ -32,15 +37,36 @@
         font-size: 16px;
       }
 
-      input[type="button"]:hover {
+      .select-all, .reset {
+        background-color: #007bff;
+      }
+
+      .select-all:hover, .reset:hover {
         background-color: #0056b3;
+      }
+
+      .delete-button {
+        background-color: #dc3545;
+      }
+
+      .delete-button:hover {
+        background-color: #c82333;
+      }
+
+      input[type="checkbox"] {
+        width: 20px;
+        height: 15px;
       }
     </style>
   </head>
   <body>
     <form id="sheetForm">
+      <div class="button-group">
+        <input type="button" class="select-all" value="ALL" onclick="selectAllSheets(true)">
+        <input type="button" class="reset" value="リセット" onclick="selectAllSheets(false)">
+      </div>
       <div id="sheetsList"></div>
-      <input type="button" value="データ削除" onclick="clearSelectedSheets()">
+      <input type="button" class="delete-button" value="データ削除" onclick="clearSelectedSheets()">
     </form>
     <script>
       document.addEventListener('DOMContentLoaded', function() {
@@ -48,6 +74,14 @@
           document.getElementById('sheetsList').innerHTML = html;
         }).getSheetsList();
       });
+
+      function selectAllSheets(select) {
+        const checkboxes = document.querySelectorAll('#sheetsList input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = select;
+        });
+      }
+
       function clearSelectedSheets() {
         const form = document.getElementById('sheetForm');
         const formData = new FormData(form);
