@@ -95,19 +95,21 @@ type CheckSheetInfo = {
 
 function onOpen(): void {
   const ui = SpreadsheetApp.getUi()
-  const activeUserEmail = Session.getActiveUser().getEmail()
-  const adminUserEmails = JSON.parse(
-    PropertiesService.getScriptProperties().getProperty(ADMIN_USER_EMAILS_PROPERTY_NAME) || '[]')
-    /* 
-    Script Property (Apps Script Editor > Project Settings > Script Properties) 
-    for admin user is stored as follows:
-    [
-      "test@azoom.jp",
-    ]
-    */
-  if (!adminUserEmails.includes(activeUserEmail)) {
-    return
-  }
+  // adminCheck is not used for sandbox
+  // const activeUserEmail = Session.getActiveUser().getEmail()
+  // const adminUserEmails = JSON.parse(
+  //   PropertiesService.getScriptProperties().getProperty(ADMIN_USER_EMAILS_PROPERTY_NAME) || '[]')
+  //   /* 
+  //   Script Property (Apps Script Editor > Project Settings > Script Properties) 
+  //   for admin user is stored as follows:
+  //   [
+  //     "test@azoom.jp",
+  //   ]
+  //   */
+  // if (!adminUserEmails.includes(activeUserEmail)) {
+  //   return
+  // }
+ 
   ui.createMenu('リスト確認')
     .addItem(`${MULTIPLE_SENDERS_CHECK_SHEET_INFO.title}`, 'checkMultipleSenderRecords')
     .addSeparator()
