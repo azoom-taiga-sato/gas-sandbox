@@ -20,7 +20,7 @@
       "rootDir": "./gas-src"
     }
     ```
-    *scriptId is the ID of the GAS project associated with [this sandbox Google Sheet](https://docs.google.com/spreadsheets/d/1izSNNE7SyY4mimvQbxWG--siekWxlsnqZ_4Y67SIbo4/edit?gid=125002228#gid=125002228).
+    *scriptId is the ID of the GAS project associated with [this sandbox Google Sheet](https://docs.google.com/spreadsheets/d/1d0l9flfI_e-LJ7kP4OguULYftEhL1bkNgGgvfD2ghWA/edit?gid=125002228#gid=125002228).
 
 3. Use `clasp login` to log in. Otherwise, when using other clasp commands, you will encounter the following error:
     ```
